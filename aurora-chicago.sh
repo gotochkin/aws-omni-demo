@@ -1,14 +1,13 @@
 #!/bin/bash
-# 
-echo "Input database user for replication"
-read PGUSER 
-echo "Input database password for the user"
-read -s PGPASSWORD 
-# Add database, user and objects
-sudo docker exec pg-service psql -h localhost -U postgres -c "create database chicago"
-sudo docker exec pg-service psql -h localhost -U postgres -d chicago -c "
-ALTER USER $DBUSER WITH replication;"
-sudo docker exec pg-service psql -h localhost -U postgres -d chicago -c "DROP TABLE IF EXISTS public.business_licenses CASCADE;
+#
+echo "Input Aurora instance hostname:"
+read INSTANCE_IP
+echo "Put username for the postgres user:"
+read PGUSER
+echo "Put password forthe user:"
+read -s PGPASSWORD
+
+psql "host=$INSTANCE_IP user=postgres dbname=chicago" -c "DROP TABLE IF EXISTS public.business_licenses CASCADE;
 CREATE TABLE public.business_licenses (
     ID character varying(16) NOT NULL,
     LICENSE_ID integer NOT NULL,
@@ -47,11 +46,11 @@ CREATE TABLE public.business_licenses (
 );
 ALTER TABLE public.business_licenses OWNER TO postgres;
 ALTER TABLE ONLY public.business_licenses ADD CONSTRAINT business_licenses_pkey PRIMARY KEY (ID,LICENSE_ID);"
-sudo docker exec pg-service psql -h localhost -U postgres -d chicago -c "CREATE EXTENSION IF NOT EXISTS pglogical;
-GRANT usage ON SCHEMA pglogical TO $DBUSER;"
-echo "Provide IP for the source database"
-read INSTANCE_IP
-sudo docker exec pg-service psql -h localhost -U postgres -d chicago -c "SELECT pglogical.create_node(node_name := 'subscriber', dsn := 'host=localhost port=5432 dbname=chicago user=$DBUSER')"
-sudo docker exec pg-service psql -h localhost -U postgres -d chicago -c "SELECT pglogical.create_subscription(subscription_name := 'omni_sub_01', provider_dsn := 'host=$INSTANCE_IP port=5432 dbname=chicago user=$DBUSER password=$PGPASSWORD')"
-sudo docker exec pg-service psql -h localhost -U postgres -d chicago -c "SELECT COUNT(*) FROM business_licenses ORDER BY 1"
 
+curl https://data.cityofchicago.org/api/views/uupf-x98q/rows.csv | psql "host=$INSTANCE_IP user=postgres dbname=chicago" -c "\copy business_licenses from stdin csv header"
+
+psql "host=$INSTANCE_IP user=postgres dbname=chicago" -c "CREATE EXTENSION IF NOT EXISTS pglogical;
+GRANT usage ON SCHEMA pglogical TO postgres;"
+
+psql "host=$INSTANCE_IP user=postgres dbname=chicago" -c "SELECT pglogical.create_node(node_name := 'provider', dsn := 'host=$INSTANCE_IP port=5432 dbname=chicago user=$PGUSER password=$PGPASSWORD');
+SELECT pglogical.replication_set_add_all_tables('default', ARRAY['public']);"
