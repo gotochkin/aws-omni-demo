@@ -7,7 +7,7 @@ read -s PGPASSWORD
 # Add database, user and objects
 sudo docker exec pg-service psql -h localhost -U postgres -c "create database chicago"
 sudo docker exec pg-service psql -h localhost -U postgres -d chicago -c "
-ALTER USER $DBUSER WITH replication;"
+ALTER USER $PGUSER WITH replication;"
 sudo docker exec pg-service psql -h localhost -U postgres -d chicago -c "DROP TABLE IF EXISTS public.business_licenses CASCADE;
 CREATE TABLE public.business_licenses (
     ID character varying(16) NOT NULL,
@@ -48,10 +48,10 @@ CREATE TABLE public.business_licenses (
 ALTER TABLE public.business_licenses OWNER TO postgres;
 ALTER TABLE ONLY public.business_licenses ADD CONSTRAINT business_licenses_pkey PRIMARY KEY (ID,LICENSE_ID);"
 sudo docker exec pg-service psql -h localhost -U postgres -d chicago -c "CREATE EXTENSION IF NOT EXISTS pglogical;
-GRANT usage ON SCHEMA pglogical TO $DBUSER;"
+GRANT usage ON SCHEMA pglogical TO $PGUSER;"
 echo "Provide IP for the source database"
 read INSTANCE_IP
-sudo docker exec pg-service psql -h localhost -U postgres -d chicago -c "SELECT pglogical.create_node(node_name := 'subscriber', dsn := 'host=localhost port=5432 dbname=chicago user=$DBUSER')"
-sudo docker exec pg-service psql -h localhost -U postgres -d chicago -c "SELECT pglogical.create_subscription(subscription_name := 'omni_sub_01', provider_dsn := 'host=$INSTANCE_IP port=5432 dbname=chicago user=$DBUSER password=$PGPASSWORD')"
+sudo docker exec pg-service psql -h localhost -U postgres -d chicago -c "SELECT pglogical.create_node(node_name := 'subscriber', dsn := 'host=localhost port=5432 dbname=chicago user=$PGUSER')"
+sudo docker exec pg-service psql -h localhost -U postgres -d chicago -c "SELECT pglogical.create_subscription(subscription_name := 'omni_sub_01', provider_dsn := 'host=$INSTANCE_IP port=5432 dbname=chicago user=$PGUSER password=$PGPASSWORD')"
 sudo docker exec pg-service psql -h localhost -U postgres -d chicago -c "SELECT COUNT(*) FROM business_licenses ORDER BY 1"
 
