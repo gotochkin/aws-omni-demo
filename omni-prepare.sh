@@ -24,6 +24,9 @@ grep -iE 'shared_preload_libraries' /var/alloydb/config/postgresql.conf
 echo -e "# pglogical entries:
 host all dbreplica samehost trust
 " | column -t | sudo tee -a /var/alloydb/config/pg_hba.conf
+echo -e "# all host accesss (remove after the test):
+host all all all md5
+" | column -t | sudo tee -a /var/alloydb/config/pg_hba.conf
 sudo alloydb database-server stop
 sudo alloydb database-server start
 
