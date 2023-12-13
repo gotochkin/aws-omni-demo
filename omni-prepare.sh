@@ -17,7 +17,8 @@ sudo apt-get -y install alloydb-cli
 sudo alloydb database-server install --data-dir=/home/$USER/alloydb-data
 sudo alloydb database-server start
 
-
+# Add the columnar parameter google_columnar_engine.enabled entry to the configuration 
+# echo google_columnar_engine.enabled=true | sudo tee -a /var/alloydb/config/postgresql.conf
 # Add pglogical to AlloyDB Omni
 sudo sed -r -i "s|(shared_preload_libraries\s*=\s*)'(.*)'.*$|\1'\2,pglogical'|" /var/alloydb/config/postgresql.conf
 grep -iE 'shared_preload_libraries' /var/alloydb/config/postgresql.conf
